@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - UNILORIN Smart Transport</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        :root {
+            --unil-green: #006633;
+            --unil-dark: #004d26;
+            --unil-light: #f5f7fa;
+            --error-red: #e74c3c;
+            --warning-orange: #f39c12;
+            --success-green: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--unil-light) 0%, #d9e4ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: var(--unil-green);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: var(--error-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover { background: #c0392b; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            color: var(--unil-dark);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--unil-green);
+        }
+
+        .status-pending { color: var(--warning-orange); }
+        .status-verified { color: var(--success-green); }
+        .status-denied { color: var(--error-red); }
+        .status-penalty { color: var(--error-red); }
+
+        .terminal-selector {
+            margin-bottom: 15px;
+        }
+
+        .terminal-selector label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .terminal-selector select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--unil-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--unil-dark);
+        }
+
+        .btn-secondary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #2982bd;
+        }
+
+        .btn-kiosk {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-kiosk:hover {
+            background: #8e44ad;
+        }
+
+        .queue-info {
+            margin: 15px 0;
+        }
+
+        .queue-info p {
+            margin: 8px 0;
+            font-size: 1.1rem;
+        }
+
+        .penalty-info {
+            background: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--error-red);
+            margin: 15px 0;
+        }
+
+        .penalty-info p {
+            color: var(--error-red);
+            font-weight: 600;
+        }
+
+        .notification {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notification.error {
+            border-left-color: var(--error-red);
+            background: #fcebea;
+        }
+
+        .notification.warning {
+            border-left-color: var(--warning-orange);
+            background: #fef9e7;
+        }
+
+        .notification strong {
+            color: #2980b9;
+            min-width: 80px;
+        }
+
+        .notification.error strong {
+            color: var(--error-red);
+        }
+
+        .notification.warning strong {
+            color: var(--warning-orange);
+        }
+
+        .notification-text {
+            flex: 1;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="studentDashboard" class="container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-user-graduate"></i> Student Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-wallet"></i> Digital Wallet</h3>
+                <div class="card-value" id="walletBalance">₦0.00</div>
+                <p>Manage your funds for transport fares.</p>
+                <!-- ✅ UPDATED: Redirect to payment-dashboard.html -->
+                <button class="btn btn-secondary" style="margin-top: 15px;" onclick="goToPaymentDashboard()">
+                    <i class="fas fa-credit-card"></i> Fund Wallet
+                </button>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-ticket-alt"></i> Queue Status</h3>
+                <div id="queueStatusDisplay">
+                    <p>Status: <span id="queueStatusText">Not in queue</span></p>
+                    <div class="queue-info hidden" id="queueInfoBox">
+                        <p>Queue: <strong id="currentQueueName">--</strong></p>
+                        <p>Your Position: <strong id="queuePosition">--</strong></p>
+                        <p>Estimated Wait: <strong id="etaTime">--</strong></p>
+                    </div>
+                    <div class="penalty-info hidden" id="penaltyBox">
+                        <p><i class="fas fa-exclamation-triangle"></i> <span id="penaltyText">Penalty Applied</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-bus"></i> Assigned Bus</h3>
+                <p>Bus ID: <strong id="assignedBusId">--</strong></p>
+                <p>Status: <span id="boardingStatus" class="status-pending">Awaiting Assignment</span></p>
+                <p>Location: <span id="busLocation">--</span></p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-user-check"></i> Boarding Eligibility</h3>
+                <p>Turn Status: <span id="turnStatus" class="status-pending">Not in queue</span></p>
+                <p>Required Action: <span id="boardingAction">Wait for assignment</span></p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-map-marker-alt"></i> Join Queue</h3>
+            <p>Choose your location to join the queue. Geofence validation ensures fairness.</p>
+            <div class="terminal-selector">
+                <label for="terminalSelect">Select Terminal:</label>
+                <select id="terminalSelect">
+                    <option value="">-- Choose Terminal --</option>
+                    <option value="depot">Depot</option>
+                    <option value="main_gate">Main Gate</option>
+                    <option value="tanke">Tanke</option>
+                    <option value="university_road">University Road</option>
+                    <option value="mini_campus">Mini Campus</option>
+                </select>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="joinQueue('fingerprint')">
+                    <i class="fas fa-fingerprint"></i> Join Queue (Fingerprint)
+                </button>
+                <button class="btn btn-kiosk" onclick="joinQueue('kiosk')">
+                    <i class="fas fa-desktop"></i> Check-in at Kiosk
+                </button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-bell"></i> Notifications</h3>
+            <div id="notificationsContainer">
+                <div class="notification">
+                    <strong>Welcome!</strong>
+                    <div class="notification-text">Please select a terminal and join the queue. Your wallet balance can be funded via the <strong>Fund Wallet</strong> button.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Initialization ---
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+
+        if (!userRole || !userId || userRole !== 'student') {
+            alert('Access Denied. Please log in as a student.');
+            window.location.href = 'index.html';
+        }
+
+        // --- Global Variables ---
+        let walletBalance = 2500; // Starting balance for demo
+        let currentQueue = null;
+        let currentQueuePosition = null;
+        let currentETA = null;
+        let assignedBusId = null;
+        let boardingEligibility = false;
+        let penaltyCount = 0;
+
+        // --- DOM Elements ---
+        const walletBalanceElement = document.getElementById('walletBalance');
+        const queueStatusTextElement = document.getElementById('queueStatusText');
+        const queueInfoBoxElement = document.getElementById('queueInfoBox');
+        const currentQueueNameElement = document.getElementById('currentQueueName');
+        const queuePositionElement = document.getElementById('queuePosition');
+        const etaTimeElement = document.getElementById('etaTime');
+        const penaltyBoxElement = document.getElementById('penaltyBox');
+        const penaltyTextElement = document.getElementById('penaltyText');
+        const assignedBusIdElement = document.getElementById('assignedBusId');
+        const boardingStatusElement = document.getElementById('boardingStatus');
+        const busLocationElement = document.getElementById('busLocation');
+        const turnStatusElement = document.getElementById('turnStatus');
+        const boardingActionElement = document.getElementById('boardingAction');
+        const notificationsContainer = document.getElementById('notificationsContainer');
+
+        // --- Initialization Logic ---
+        walletBalanceElement.textContent = `₦${walletBalance.toLocaleString()}`;
+        updateUI();
+
+        // --- Firebase Listeners (same as before) ---
+        database.ref(`assignments/students/${userId}`).on('value', (snapshot) => {
+            const assignment = snapshot.val();
+            if (assignment && assignment.busId) {
+                assignedBusId = assignment.busId;
+                addNotification('Assignment', `You have been assigned to bus: <strong>${assignedBusId}</strong>. Proceed to the boarding area.`, 'info');
+                updateUI();
+            } else {
+                assignedBusId = null;
+                updateUI();
+            }
+        });
+
+        database.ref('buses').on('value', (snapshot) => {
+            const buses = snapshot.val();
+            if (buses && assignedBusId && buses[assignedBusId]) {
+                const busData = buses[assignedBusId];
+                busLocationElement.textContent = busData.location || 'Unknown';
+                updateUI();
+            }
+        });
+
+        database.ref(`penalties/students/${userId}`).on('value', (snapshot) => {
+            const penaltyData = snapshot.val();
+            if (penaltyData && penaltyData.active && penaltyData.count > 0) {
+                penaltyCount = penaltyData.count;
+                addNotification('Penalty', `A penalty has been applied. You must wait for ${penaltyCount} more bus(es) before joining a queue again.`, 'error');
+                updateUI();
+            } else {
+                penaltyCount = 0;
+                updateUI();
+            }
+        });
+
+        database.ref(`notifications/students/${userId}`).on('child_added', (snapshot) => {
+            const notificationData = snapshot.val();
+            if (notificationData) {
+                addNotification('System', notificationData.message, notificationData.type || 'info');
+            }
+        });
+
+        // --- Core Functions ---
+        function joinQueue(method) {
+            if (penaltyCount > 0) {
+                addNotification('Queue Join Failed', `Penalty is active. You must wait for ${penaltyCount} more bus(es).`, 'error');
+                return;
+            }
+
+            const selectedTerminal = document.getElementById('terminalSelect').value;
+            if (!selectedTerminal) {
+                addNotification('Queue Join Failed', 'Please select a terminal first.', 'error');
+                return;
+            }
+
+            const queueId = `Q_${selectedTerminal.toUpperCase()}`;
+            const position = Math.floor(Math.random() * 15) + 1;
+            const eta = position * 5;
+
+            currentQueue = queueId;
+            currentQueuePosition = position;
+            currentETA = eta;
+
+            database.ref(`queues/${queueId}/students`).push({
+                studentId: userId,
+                position: position,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+            database.ref(`queues/${queueId}`).update({
+                count: position,
+                eta: `${eta} mins`
+            });
+
+            addNotification('Queue Joined', `Successfully joined queue <strong>${queueId}</strong> at <strong>${selectedTerminal.replace('_', ' ')}</strong> via ${method}. Position: <strong>${position}</strong>, ETA: ~<strong>${eta}</strong> mins.`, 'info');
+            updateUI();
+        }
+
+        // ✅ NEW: Redirect to payment dashboard
+        function goToPaymentDashboard() {
+            window.location.href = 'payment-dashboard.html';
+        }
+
+        function addNotification(type, message, level = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${level}`;
+            notification.innerHTML = `<strong>${type}:</strong><div class="notification-text">${message}</div>`;
+            notificationsContainer.prepend(notification);
+
+            if (notificationsContainer.children.length > 10) {
+                notificationsContainer.removeChild(notificationsContainer.lastChild);
+            }
+        }
+
+        function updateUI() {
+            walletBalanceElement.textContent = `₦${walletBalance.toLocaleString()}`;
+
+            if (penaltyCount > 0) {
+                queueStatusTextElement.textContent = 'Penalty Active';
+                queueStatusTextElement.className = 'status-penalty';
+                queueInfoBoxElement.classList.add('hidden');
+                penaltyBoxElement.classList.remove('hidden');
+                penaltyTextElement.textContent = `Penalty: Wait for ${penaltyCount} more bus(es)`;
+            } else if (currentQueue && currentQueuePosition !== null) {
+                queueStatusTextElement.textContent = 'In Queue';
+                queueStatusTextElement.className = '';
+                queueInfoBoxElement.classList.remove('hidden');
+                currentQueueNameElement.textContent = currentQueue;
+                queuePositionElement.textContent = currentQueuePosition;
+                etaTimeElement.textContent = `~${currentETA} mins`;
+                penaltyBoxElement.classList.add('hidden');
+            } else {
+                queueStatusTextElement.textContent = 'Not in queue';
+                queueStatusTextElement.className = '';
+                queueInfoBoxElement.classList.add('hidden');
+                penaltyBoxElement.classList.add('hidden');
+            }
+
+            assignedBusIdElement.textContent = assignedBusId || '--';
+            if (assignedBusId) {
+                if (boardingEligibility) {
+                    boardingStatusElement.textContent = 'Boarding Authorized';
+                    boardingStatusElement.className = 'status-verified';
+                }  else if (currentQueuePosition === 1) {
+                    boardingStatusElement.textContent = 'Your Turn - Await Scan';
+                    boardingStatusElement.className = 'status-pending';
+                } else {
+                    boardingStatusElement.textContent = 'Assigned - Waiting Turn';
+                    boardingStatusElement.className = 'status-pending';
+                }
+            } else {
+                boardingStatusElement.textContent = 'Not Assigned';
+                boardingStatusElement.className = 'status-pending';
+            }
+
+            if (penaltyCount > 0) {
+                turnStatusElement.textContent = 'Penalty Active';
+                turnStatusElement.className = 'status-penalty';
+                boardingActionElement.textContent = `Wait for ${penaltyCount} buses`;
+                boardingActionElement.className = 'status-penalty';
+            } else if (currentQueuePosition === 1) {
+                turnStatusElement.textContent = 'Your Turn!';
+                turnStatusElement.className = 'status-verified';
+                boardingActionElement.textContent = 'Present ID to driver for scan';
+                boardingActionElement.className = 'status-pending';
+            } else if (currentQueuePosition > 1) {
+                turnStatusElement.textContent = 'Waiting Turn';
+                turnStatusElement.className = 'status-pending';
+                boardingActionElement.textContent = `Wait for your turn (#${currentQueuePosition})`;
+                boardingActionElement.className = 'status-pending';
+            } else {
+                turnStatusElement.textContent = 'Not in queue';
+                turnStatusElement.className = 'status-pending';
+                boardingActionElement.textContent = 'Join a queue first';
+                boardingActionElement.className = 'status-pending';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+</html>

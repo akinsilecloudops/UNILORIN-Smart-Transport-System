@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Dashboard - UNILORIN Smart Transport</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        :root {
+            --unil-green: #006633;
+            --unil-dark: #004d26;
+            --unil-light: #f5f7fa;
+            --error-red: #e74c3c;
+            --warning-orange: #f39c12;
+            --success-green: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--unil-light) 0%, #d9e4ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: var(--unil-green);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: var(--error-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover { background: #c0392b; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            color: var(--unil-dark);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--unil-green);
+        }
+
+        .status-idle { color: var(--warning-orange); }
+        .status-transit { color: var(--unil-green); }
+        .status-completed { color: #7f8c8d; }
+        .status-authenticated { color: var(--success-green); }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn-primary { background: var(--unil-green); color: white; }
+        .btn-primary:hover { background: var(--unil-dark); }
+        .btn-start { background: var(--success-green); color: white; }
+        .btn-start:hover { background: #27ae60; }
+        .btn-end { background: var(--error-red); color: white; }
+        .btn-end:hover { background: #c0392b; }
+        .btn-update { background: #3498db; color: white; }
+        .btn-update:hover { background: #2982bd; }
+        .btn-scan { background: #f39c1b; color: white; }
+        .btn-scan:hover { background: #d68910; }
+        .btn-broadcast { background: #e67e22; color: white; }
+        .btn-broadcast:hover { background: #d35400; }
+
+        .hidden { display: none; }
+
+        .route-stations {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .station {
+            text-align: center;
+            padding: 10px 15px;
+            border-radius: 5px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            min-width: 70px;
+            flex-grow: 1;
+            margin: 0 5px;
+        }
+
+        .station.active {
+            background: var(--unil-green);
+            color: white;
+            font-weight: bold;
+        }
+
+        .scanning-section {
+            margin-top: 15px;
+        }
+
+        .scanning-input {
+            width: 100%;
+            padding: 12px 16px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .broadcast-section textarea {
+            width: 100%;
+            padding: 12px 16px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .notification {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .notification.error { border-left-color: var(--error-red); background: #fcebea; }
+        .notification.success { border-left-color: var(--success-green); background: #eafaf1; }
+
+        .notification strong { color: #2980b9; min-width: 80px; }
+        .notification.error strong { color: var(--error-red); }
+        .notification.success strong { color: var(--success-green); }
+
+        .notification-text { flex: 1; }
+
+        .instructions {
+            background: #fff8dc;
+            border-left: 4px solid var(--warning-orange);
+            padding: 15px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 20px;
+            font-size: 0.95rem;
+        }
+
+        .instructions ol { padding-left: 20px; }
+        .instructions li { margin-bottom: 8px; }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .route-stations { flex-direction: column; }
+            .station { margin: 5px 0; }
+        }
+    </style>
+</head>
+<body>
+    <div id="driverDashboard" class="container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-user-tie"></i> Driver Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-id-card"></i> Driver Identity</h3>
+                <p><strong>ID:</strong> <span id="driverIdDisplay">--</span></p>
+                <p>Status: <span id="authStatusDisplay" class="status-idle">Waiting for Card Swipe (Bus)</span></p>
+                <!-- Removed manual auth button/input -->
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-bus"></i> Bus Assignment</h3>
+                <p><strong>Bus ID:</strong> <span id="busIdDisplay">--</span></p>
+                <p>Status: <span id="busStatusDisplay" class="status-completed">Not Assigned</span></p>
+                <p>Location: <span id="busLocationDisplay">--</span></p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-route"></i> Trip Status</h3>
+                <p>Current Trip: <span id="tripIdDisplay">--</span></p>
+                <p>Progress: <span id="tripStatusDisplay" class="status-completed">Inactive</span></p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-tasks"></i> Daily Trips</h3>
+                <p><strong>Completed Today:</strong> <span id="dailyTripCount">0</span></p>
+            </div>
+        </div>
+
+        <!-- Operational Controls (Hidden until authenticated via DB) -->
+        <div id="operationalControls" class="hidden">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-road"></i> Route Progression</h3>
+                <div class="route-stations">
+                    <div class="station" id="station_depot">Depot</div>
+                    <div class="station" id="station_main_gate">Main Gate</div>
+                    <div class="station" id="station_tanke">Tanke</div>
+                    <div class="station" id="station_university_road">University Road</div>
+                    <div class="station" id="station_mini_campus">Mini Campus</div>
+                </div>
+                <button class="btn btn-update" onclick="updateLocation()">
+                    <i class="fas fa-map-marker-alt"></i> Update Location
+                </button>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-cogs"></i> Trip Management</h3>
+                <button id="startTripBtn" class="btn btn-start" onclick="startTrip()">
+                    <i class="fas fa-play"></i> Start Trip
+                </button>
+                <button id="endTripBtn" class="btn btn-end hidden" onclick="endTrip()">
+                    <i class="fas fa-stop"></i> End Trip
+                </button>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-user-plus"></i> Boarding Control</h3>
+                <div class="scanning-section">
+                    <label for="studentCardInput">Scan Student ID Card:</label>
+                    <input type="text" class="scanning-input" id="studentCardInput" placeholder="Enter/Scan Student ID (e.g., 24/30GB001)" disabled>
+                    <button class="btn btn-scan" onclick="scanAndVerify()" id="scanButton" disabled>
+                        <i class="fas fa-qrcode"></i> Verify & Allow Boarding
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-bullhorn"></i> Announcements</h3>
+                <div class="broadcast-section">
+                    <label for="broadcastMessage">Send Announcement:</label>
+                    <textarea id="broadcastMessage" placeholder="Type your message to passengers..." disabled></textarea>
+                    <button class="btn btn-broadcast" onclick="sendBroadcast()" id="broadcastButton" disabled>
+                        <i class="fas fa-paper-plane"></i> Send Broadcast
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-info-circle"></i> Instructions</h3>
+            <div class="instructions">
+                <ol>
+                    <li><strong>Authenticate:</strong> Swipe your ID card on the bus-mounted card reader. This will assign you a bus and enable controls on this portal.</li>
+                    <li><strong>Start Trip:</strong> Press 'Start Trip' when departing from the depot.</li>
+                    <li><strong>Update Location:</strong> Click 'Update Location' as you pass each station (this simulates GPS).</li>
+                    <li><strong>Board Passengers:</strong> At the stop, scan student IDs using the input field. The system will verify if they are assigned to your bus and it's their turn.</li>
+                    <li><strong>End Trip:</strong> Press 'End Trip' when you arrive at the destination. This updates your daily trip count.</li>
+                    <li><strong>Communicate:</strong> Use the 'Send Broadcast' feature to inform passengers.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-bell"></i> Driver Notifications</h3>
+            <div id="driverNotificationsContainer">
+                <div class="notification">
+                    <strong>Welcome!</strong>
+                    <div class="notification-text">Please swipe your driver ID card on the bus-mounted reader to begin.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Initialization ---
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId'); // Driver ID (e.g., DRV001)
+
+        if (!userRole || !userId || userRole !== 'driver') {
+            alert('Access Denied. Please log in as a driver.');
+            window.location.href = 'index.html';
+        }
+
+        // --- Global Variables ---
+        let isAuthenticated = false; // Now reflects state from DB
+        let assignedBusId = null; // Assigned via DB when driver swipes card
+        let tripActive = false;
+        let currentTripId = null;
+        let currentRouteIndex = 0;
+        let dailyTripCount = 0;
+        const routeStations = ['depot', 'main_gate', 'tanke', 'university_road', 'mini_campus'];
+
+        // --- DOM Elements ---
+        const driverIdDisplay = document.getElementById('driverIdDisplay');
+        const authStatusDisplay = document.getElementById('authStatusDisplay');
+        const busIdDisplay = document.getElementById('busIdDisplay');
+        const busStatusDisplay = document.getElementById('busStatusDisplay');
+        const busLocationDisplay = document.getElementById('busLocationDisplay');
+        const tripIdDisplay = document.getElementById('tripIdDisplay');
+        const tripStatusDisplay = document.getElementById('tripStatusDisplay');
+        const dailyTripCountElement = document.getElementById('dailyTripCount');
+        const operationalControls = document.getElementById('operationalControls');
+        const startTripBtn = document.getElementById('startTripBtn');
+        const endTripBtn = document.getElementById('endTripBtn');
+        const studentCardInput = document.getElementById('studentCardInput');
+        const scanButton = document.getElementById('scanButton');
+        const broadcastMessage = document.getElementById('broadcastMessage');
+        const broadcastButton = document.getElementById('broadcastButton');
+        const driverNotificationsContainer = document.getElementById('driverNotificationsContainer');
+
+        // --- Initialization Logic ---
+        driverIdDisplay.textContent = userId;
+        updateUI();
+
+        // --- Firebase Listeners ---
+        let busListenerRef = null; // Listens to the bus assigned to the driver
+        let tripListenerRef = null; // Listener for current trip updates
+        let unassignedBusListenerRef = null; // Listens to potential buses assigned to this driver
+
+        // Start listening for buses that might be assigned to this driver
+        // This simulates the backend (Lambda triggered by card reader) updating the 'driverId' field in a bus record
+        function startListeningForAssignment() {
+            // Listen to all buses for potential assignment to this driver
+            unassignedBusListenerRef = database.ref('buses');
+            unassignedBusListenerRef.on('child_added', (snapshot) => {
+                const busData = snapshot.val();
+                if (busData && busData.driverId === userId && !isAuthenticated) {
+                    handleBusAssignment(snapshot.key, busData);
+                }
+            });
+
+            unassignedBusListenerRef.on('child_changed', (snapshot) => {
+                const busData = snapshot.val();
+                // Check if the driver ID was just set to this driver's ID (assigning the bus)
+                if (busData && busData.driverId === userId) {
+                     // Check if this bus is different from the currently assigned one (in case of switching)
+                     if (assignedBusId && assignedBusId !== snapshot.key) {
+                         // If switching, de-auth the old bus first
+                         handleBusUnassignment(assignedBusId);
+                     }
+                     // Handle the new assignment
+                     handleBusAssignment(snapshot.key, busData);
+                }
+                // Check if the driver ID was removed from a bus this driver was assigned to
+                else if (assignedBusId === snapshot.key && (!busData || !busData.driverId || busData.driverId !== userId)) {
+                    handleBusUnassignment(snapshot.key);
+                }
+            });
+        }
+
+        function handleBusAssignment(busId, busData) {
+             if (isAuthenticated && assignedBusId && assignedBusId !== busId) {
+                 // If already assigned to a different bus, notify or handle accordingly
+                 addNotification('Bus Switch', `Switched from bus ${assignedBusId} to ${busId}.`, 'info');
+                 // Clean up old bus listener if needed (though it's tied to the specific bus key)
+                 if (busListenerRef) {
+                     busListenerRef.off();
+                 }
+             }
+             // Update local state
+             assignedBusId = busId;
+             isAuthenticated = true; // Mark as authenticated based on DB assignment
+             // Set up listener for the assigned bus
+             setupBusListener(busId);
+             // Fetch initial daily trip count
+             fetchDailyTripCount();
+             addNotification('Bus Assigned', `Successfully assigned to bus ${busId}. Controls enabled.`, 'success');
+             updateUI();
+        }
+
+        function handleBusUnassignment(busId) {
+             if (assignedBusId === busId) {
+                 // Clean up listeners for the bus being unassigned
+                 if (busListenerRef) {
+                     busListenerRef.off();
+                     busListenerRef = null;
+                 }
+                 // Reset local state
+                 assignedBusId = null;
+                 isAuthenticated = false;
+                 tripActive = false;
+                 currentTripId = null;
+                 currentRouteIndex = 0; // Reset route index if unassigned during trip
+                 addNotification('Bus Unassigned', `Unassigned from bus ${busId}. Controls disabled.`, 'warning');
+                 updateUI();
+             }
+        }
+
+        function setupBusListener(busId) {
+            if (busListenerRef) {
+                busListenerRef.off(); // Remove old listener if switching
+            }
+            busListenerRef = database.ref(`buses/${busId}`);
+            busListenerRef.on('value', (snapshot) => {
+                const busData = snapshot.val();
+                if (busData) {
+                    // Update bus location and status display based on DB
+                    busLocationDisplay.textContent = busData.location || 'Unknown';
+                    const status = busData.status || 'Unknown';
+                    busStatusDisplay.textContent = status;
+                    busStatusDisplay.className = status.toLowerCase().includes('transit') ? 'status-transit' : status.toLowerCase().includes('completed') ? 'status-completed' : 'status-idle';
+
+                    // Check if trip status changed (started/ended by external system or another instance)
+                    if (busData.active) {
+                        if (!tripActive) {
+                             // Trip might have started elsewhere, sync local state
+                             // We might not know the exact tripId without querying trips table by busId and active=true
+                             // For demo, we'll just set tripActive
+                             tripActive = true;
+                             updateUI();
+                             addNotification('Trip Sync', `Trip status synced to active for bus ${busId}.`, 'info');
+                        }
+                    } else if (tripActive) {
+                         // Trip ended elsewhere
+                         tripActive = false;
+                         currentTripId = null;
+                         currentRouteIndex = 0; // Reset route
+                         fetchDailyTripCount(); // Refresh count after trip ends
+                         updateUI();
+                         addNotification('Trip Sync', `Trip status synced to inactive for bus ${busId}.`, 'info');
+                    }
+                } else {
+                    // Bus record deleted or invalid?
+                    handleBusUnassignment(busId);
+                }
+            });
+        }
+
+        // --- Core Functions (Adjusted for DB-driven auth) ---
+
+        function startTrip() {
+            // Auth and bus assignment are now driven by DB state
+            if (!isAuthenticated || !assignedBusId) {
+                addNotification('Trip Start Failed', 'Not assigned to a bus. Please swipe your card on the bus reader.', 'error');
+                return;
+            }
+            if (tripActive) {
+                 addNotification('Trip Start Failed', 'A trip is already active.', 'error');
+                 return;
+            }
+            // In SOW: Driver presses start button on bus system -> Lambda updates Aurora trip record and bus status
+            // For demo, simulate this by updating Firebase directly from the portal
+            tripActive = true;
+            currentTripId = `TRIP_${Date.now()}_${assignedBusId}_${userId}`;
+
+            // Update Firebase to simulate backend action
+            database.ref(`trips/${currentTripId}`).set({
+                id: currentTripId,
+                busId: assignedBusId,
+                driverId: userId,
+                startTime: firebase.database.ServerValue.TIMESTAMP,
+                status: 'active'
+            });
+
+            // Update bus status in Firebase to simulate backend action
+            database.ref(`buses/${assignedBusId}`).update({
+                status: 'In Transit',
+                active: true
+            });
+
+            addNotification('Trip Started', `Trip ${currentTripId} initiated for bus ${assignedBusId}.`, 'success');
+            updateUI();
+        }
+
+        function endTrip() {
+            if (!isAuthenticated || !tripActive || !currentTripId || !assignedBusId) {
+                addNotification('Trip End Failed', 'No active trip to end or not assigned to a bus.', 'error');
+                return;
+            }
+            // In SOW: Driver presses end button on bus system -> Lambda updates Aurora trip record and bus status
+            // For demo, simulate this by updating Firebase directly from the portal
+            tripActive = false;
+
+            // Update Firebase to simulate backend action
+            database.ref(`trips/${currentTripId}`).update({
+                endTime: firebase.database.ServerValue.TIMESTAMP,
+                status: 'completed'
+            });
+
+            database.ref(`buses/${assignedBusId}`).update({
+                status: 'Completed',
+                location: routeStations[currentRouteIndex], // Final location
+                active: false
+            });
+
+            // Increment daily trip count upon successful end
+            fetchDailyTripCount(); // Refresh count after ending trip
+
+            addNotification('Trip Ended', `Trip ${currentTripId} concluded. Bus ${assignedBusId} marked as completed.`, 'success');
+            currentTripId = null;
+            currentRouteIndex = 0; // Reset route for next trip
+            updateUI();
+        }
+
+        function updateLocation() {
+            if (!isAuthenticated || !tripActive || !assignedBusId) {
+                addNotification('Location Update Failed', 'Must be assigned to a bus and on an active trip.', 'error');
+                return;
+            }
+            if (currentRouteIndex < routeStations.length - 1) {
+                currentRouteIndex++;
+                const newLocation = routeStations[currentRouteIndex].replace('_', ' ').toUpperCase();
+
+                // In SOW: GPS device sends data -> IoT Core -> Lambda -> Aurora update
+                // For demo, simulate this by updating Firebase directly from the portal
+                database.ref(`buses/${assignedBusId}`).update({
+                    location: newLocation
+                });
+
+                 addNotification('Location Updated', `Bus ${assignedBusId} is now at ${newLocation}.`, 'info');
+                 updateUI();
+            } else {
+                 addNotification('Destination Reached', 'You have reached the final destination. Please end the trip.', 'warning');
+            }
+        }
+
+        function scanAndVerify() {
+            if (!isAuthenticated || !assignedBusId) {
+                 addNotification('Scan Failed', 'Must be assigned to a bus to scan student IDs.', 'error');
+                 return;
+            }
+            const scannedId = document.getElementById('studentCardInput').value.trim();
+            if (!scannedId) {
+                 addNotification('Scan Failed', 'Please enter a student ID to scan.', 'error');
+                 return;
+            }
+
+            // Simulate verification logic (as before)
+            const queueId = assignedBusId;
+            database.ref(`queues/${queueId}`).once('value').then((snapshot) => {
+                const queueData = snapshot.val();
+                const nextUpId = queueData?.nextUp;
+
+                if (nextUpId && nextUpId === scannedId) {
+                    database.ref(`queues/${queueId}`).update({
+                        count: Math.max(0, (queueData.count || 0) - 1)
+                    });
+                    database.ref(`notifications/students/${scannedId}`).push({
+                        message: `Boarding confirmed for bus ${assignedBusId}. Fare deducted.`,
+                        type: 'success',
+                        timestamp: firebase.database.ServerValue.TIMESTAMP
+                    });
+                    addNotification('Boarding Confirmed', `Student ${scannedId} successfully boarded ${assignedBusId}. Fare processed.`, 'success');
+                    document.getElementById('studentCardInput').value = '';
+                } else {
+                    let reason = 'ID not assigned to this bus or not your turn.';
+                    if (nextUpId && nextUpId !== scannedId) {
+                        reason = 'Wrong ID scanned. Next up is: ' + nextUpId;
+                    }
+                    addNotification('Boarding Denied', `Scan for ${scannedId} failed. Reason: ${reason}`, 'error');
+                }
+            }).catch((error) => {
+                console.error("Error fetching queue data for verification:", error);
+                addNotification('Verification Error', 'Failed to verify student. Please try again.', 'error');
+            });
+        }
+
+        function sendBroadcast() {
+             if (!isAuthenticated || !assignedBusId) {
+                 addNotification('Broadcast Failed', 'Must be assigned to a bus to send broadcasts.', 'error');
+                 return;
+             }
+            const message = document.getElementById('broadcastMessage').value.trim();
+            if (!message) {
+                 addNotification('Broadcast Failed', 'Please enter a message to broadcast.', 'error');
+                 return;
+            }
+
+            const timestamp = firebase.database.ServerValue.TIMESTAMP;
+            database.ref(`notifications/broadcasts/${assignedBusId}`).push({
+                message: message,
+                sender: userId,
+                timestamp: timestamp
+            });
+
+            addNotification('Broadcast Sent', `Message sent to passengers: "${message}"`, 'info');
+            document.getElementById('broadcastMessage').value = '';
+        }
+
+        async function fetchDailyTripCount() {
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+
+            try {
+                const snapshot = await database.ref('trips').orderByChild('driverId').equalTo(userId).once('value');
+                let count = 0;
+                snapshot.forEach((childSnapshot) => {
+                    const tripData = childSnapshot.val();
+                    if (tripData.status === 'completed' && tripData.endTime) {
+                        if (tripData.endTime >= startOfDay && tripData.endTime < endOfDay) {
+                            count++;
+                        }
+                    }
+                });
+                dailyTripCount = count;
+                dailyTripCountElement.textContent = dailyTripCount;
+            } catch (error) {
+                console.error("Error fetching daily trip count:", error);
+                dailyTripCountElement.textContent = 'Err';
+            }
+        }
+
+        function addNotification(type, message, level = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${level}`;
+            notification.innerHTML = `<strong>${type}:</strong><div class="notification-text">${message}</div>`;
+            driverNotificationsContainer.prepend(notification);
+
+            if (driverNotificationsContainer.children.length > 10) {
+                driverNotificationsContainer.removeChild(driverNotificationsContainer.lastChild);
+            }
+        }
+
+        function updateUI() {
+            // Update Auth Status based on local variable reflecting DB state
+            authStatusDisplay.textContent = isAuthenticated ? 'Authenticated (Card Swiped)' : 'Waiting for Card Swipe (Bus)';
+            authStatusDisplay.className = isAuthenticated ? 'status-authenticated' : 'status-idle';
+
+            // Update Bus Info
+            busIdDisplay.textContent = assignedBusId || '--';
+            busStatusDisplay.textContent = assignedBusId ? (tripActive ? 'In Transit' : 'Assigned') : 'Not Assigned';
+            busStatusDisplay.className = tripActive ? 'status-transit' : (isAuthenticated ? 'status-idle' : 'status-completed'); // Grey if authenticated but not on trip
+
+            // Update Trip Info
+            tripIdDisplay.textContent = currentTripId || '--';
+            tripStatusDisplay.textContent = tripActive ? 'Active' : 'Inactive';
+            tripStatusDisplay.className = tripActive ? 'status-transit' : 'status-completed';
+
+            // Show/hide operational controls based on DB-driven auth state
+            if (isAuthenticated) {
+                operationalControls.classList.remove('hidden');
+            } else {
+                operationalControls.classList.add('hidden');
+            }
+
+            // Enable/disable trip buttons based on DB-driven auth and trip state
+            startTripBtn.disabled = !isAuthenticated || tripActive;
+            endTripBtn.disabled = !isAuthenticated || !tripActive;
+            if (tripActive) {
+                endTripBtn.classList.remove('hidden');
+                startTripBtn.classList.add('hidden');
+            } else {
+                endTripBtn.classList.add('hidden');
+                startTripBtn.classList.remove('hidden');
+            }
+
+            // Enable/disable other inputs based on DB-driven auth and trip state
+            const inputsEnabled = isAuthenticated && tripActive;
+            document.getElementById('studentCardInput').disabled = !inputsEnabled;
+            document.getElementById('scanButton').disabled = !inputsEnabled;
+            document.getElementById('broadcastMessage').disabled = !inputsEnabled;
+            document.getElementById('broadcastButton').disabled = !inputsEnabled;
+
+            // Update route station highlights
+            routeStations.forEach((stationKey, index) => {
+                const stationElement = document.getElementById(`station_${stationKey}`);
+                if (stationElement) {
+                    if (index === currentRouteIndex) {
+                        stationElement.classList.add('active');
+                    } else {
+                        stationElement.classList.remove('active');
+                    }
+                }
+            });
+        }
+
+        function logout() {
+            // Clean up all Firebase listeners
+            if (busListenerRef) {
+                busListenerRef.off();
+            }
+            if (unassignedBusListenerRef) {
+                 unassignedBusListenerRef.off();
+            }
+            if (tripListenerRef) {
+                tripListenerRef.off();
+            }
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html';
+        }
+
+        // Start listening for bus assignment when the page loads
+        document.addEventListener('DOMContentLoaded', startListeningForAssignment);
+
+    </script>
+</body>
+</html>

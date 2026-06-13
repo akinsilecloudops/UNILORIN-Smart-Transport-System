@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet & Payments - UNILORIN Smart Transport</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        :root {
+            --unil-green: #006633;
+            --unil-dark: #004d26;
+            --unil-light: #f5f7fa;
+            --error-red: #e74c3c;
+            --warning-orange: #f39c12;
+            --success-green: #2ecc71;
+            --info-blue: #3498db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--unil-light) 0%, #d9e4ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: var(--unil-green);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: var(--error-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover { background: #c0392b; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            color: var(--unil-dark);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .balance-display {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--unil-green);
+            margin: 10px 0;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        .btn-primary { background: var(--unil-green); color: white; }
+        .btn-primary:hover { background: var(--unil-dark); }
+        .btn-secondary { background: var(--info-blue); color: white; }
+        .btn-secondary:hover { background: #2982bd; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--unil-dark);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) { background-color: #fafafa; }
+
+        .status-success { color: var(--success-green); font-weight: 600; }
+        .status-pending { color: var(--warning-orange); font-weight: 600; }
+        .status-failed { color: var(--error-red); font-weight: 600; }
+        .type-funding { color: var(--info-blue); }
+        .type-fare { color: var(--unil-dark); }
+        .type-refund { color: var(--success-green); }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 30px;
+            border: 1px solid #888;
+            width: 90%;
+            max-width: 500px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover { color: black; }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        @keyframes fadeIn { from {opacity: 0} to {opacity: 1} }
+        @keyframes slideIn { from {transform: translateY(-50px)} to {transform: translateY(0)} }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            table { font-size: 0.9rem; }
+            th, td { padding: 8px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="paymentDashboard" class="container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-wallet"></i> Wallet & Payments</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Wallet Balance Card -->
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-coins"></i> Current Balance</h3>
+                <div class="balance-display" id="walletBalance">₦0.00</div>
+                <p style="color: #666; margin-bottom: 15px;">Available for transport fares</p>
+                <button class="btn btn-primary" onclick="openFundModal()">
+                    <i class="fas fa-plus-circle"></i> Fund Wallet
+                </button>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-chart-pie"></i> Monthly Overview</h3>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                    <div>
+                        <p style="font-size: 0.9rem; color: #666;">Total Spent</p>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--unil-dark);" id="totalSpent">₦0.00</p>
+                    </div>
+                    <div>
+                        <p style="font-size: 0.9rem; color: #666;">Total Added</p>
+                        <p style="font-size: 1.5rem; font-weight: bold; color: var(--success-green);" id="totalAdded">0.00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-history"></i> Transaction History</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionTableBody">
+                        <tr><td colspan="5" style="text-align:center; color:#999;">Loading transactions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fund Wallet Modal -->
+    <div id="fundModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeFundModal()">&times;</span>
+            <h2 style="color: var(--unil-dark); margin-bottom: 20px;"><i class="fas fa-credit-card"></i> Fund Your Wallet</h2>
+            
+            <div class="form-group">
+                <label for="amount">Amount (₦)</label>
+                <input type="number" id="amount" placeholder="Enter amount (Min: ₦100)" min="100">
+            </div>
+
+            <div class="form-group">
+                <label for="paymentMethod">Payment Method</label>
+                <select id="paymentMethod">
+                    <option value="card">Debit/Credit Card</option>
+                    <option value="bank">Bank Transfer</option>
+                    <option value="ussd">USSD</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="cardNumber">Card Number (Simulated)</label>
+                <input type="text" id="cardNumber" placeholder="**** **** **** ****" disabled>
+            </div>
+
+            <button class="btn btn-primary" onclick="processPayment()">
+                <i class="fas fa-lock"></i> Pay Securely
+            </button>
+            
+            <p style="font-size: 0.85rem; color: #777; margin-top: 15px; text-align: center;">
+                <i class="fas fa-shield-alt"></i> Secured by AWS Payment Gateway Simulation
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- Auth Check ---
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId'); // Student Matric No
+
+        if (!userRole || !userId || userRole !== 'student') {
+            alert('Access Denied. Please log in as a student.');
+            window.location.href = 'login-dashboard.html';
+        }
+
+        // --- DOM Elements ---
+        const walletBalanceEl = document.getElementById('walletBalance');
+        const totalSpentEl = document.getElementById('totalSpent');
+        const totalAddedEl = document.getElementById('totalAdded');
+        const transactionTableBody = document.getElementById('transactionTableBody');
+        const fundModal = document.getElementById('fundModal');
+        const amountInput = document.getElementById('amount');
+        const paymentMethodSelect = document.getElementById('paymentMethod');
+
+        // --- State ---
+        let currentBalance = 0;
+        let totalSpent = 0;
+        let totalAdded = 0;
+
+        // --- Firebase Listeners ---
+
+        // 1. Listen for Wallet Balance Updates
+        database.ref(`students/${userId}/wallet`).on('value', (snapshot) => {
+            const balance = snapshot.val() || 0;
+            currentBalance = balance;
+            walletBalanceEl.textContent = `${balance.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        });
+
+        // 2. Listen for Transactions
+        database.ref(`transactions/${userId}`).orderByChild('timestamp').on('value', (snapshot) => {
+            transactionTableBody.innerHTML = '';
+            totalSpent = 0;
+            totalAdded = 0;
+
+            const transactions = [];
+            snapshot.forEach((childSnapshot) => {
+                transactions.push(childSnapshot.val());
+            });
+
+            // Sort by timestamp descending (newest first)
+            transactions.sort((a, b) => b.timestamp - a.timestamp);
+
+            if (transactions.length === 0) {
+                transactionTableBody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">No transactions found.</td></tr>';
+                return;
+            }
+
+            transactions.forEach(tx => {
+                const row = document.createElement('tr');
+                
+                // Determine styling based on type and status
+                const typeClass = tx.type === 'funding' ? 'type-funding' : tx.type === 'fare' ? 'type-fare' : 'type-refund';
+                const statusClass = tx.status === 'success' ? 'status-success' : tx.status === 'pending' ? 'status-pending' : 'status-failed';
+                const amountPrefix = tx.type === 'funding' || tx.type === 'refund' ? '+' : '-';
+                const amountColor = tx.type === 'funding' || tx.type === 'refund' ? 'var(--success-green)' : 'var(--unil-dark)';
+
+                // Update totals
+                if (tx.status === 'success') {
+                    if (tx.type === 'funding' || tx.type === 'refund') {
+                        totalAdded += tx.amount;
+                    } else if (tx.type === 'fare') {
+                        totalSpent += tx.amount;
+                    }
+                }
+
+                row.innerHTML = `
+                    <td>${formatTimestamp(tx.timestamp)}</td>
+                    <td><span class="${typeClass}">${capitalizeFirstLetter(tx.type)}</span></td>
+                    <td>${tx.description || 'N/A'}</td>
+                    <td style="color: ${amountColor}; font-weight: 600;">${amountPrefix}₦${tx.amount.toLocaleString()}</td>
+                    <td><span class="${statusClass}">${capitalizeFirstLetter(tx.status)}</span></td>
+                `;
+                transactionTableBody.appendChild(row);
+            });
+
+            // Update stats
+            totalSpentEl.textContent = `₦${totalSpent.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            totalAddedEl.textContent = `₦${totalAdded.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        });
+
+        // --- Modal Functions ---
+        function openFundModal() {
+            fundModal.style.display = "block";
+            amountInput.value = '';
+            document.getElementById('cardNumber').disabled = false;
+        }
+
+        function closeFundModal() {
+            fundModal.style.display = "none";
+        }
+
+        // Close modal if clicked outside
+        window.onclick = function(event) {
+            if (event.target == fundModal) {
+                closeFundModal();
+            }
+        }
+
+        // --- Payment Processing Simulation ---
+        function processPayment() {
+            const amount = parseFloat(amountInput.value);
+            const method = paymentMethodSelect.value;
+
+            if (!amount || amount < 100) {
+                alert("Please enter a valid amount (Minimum ₦100).");
+                return;
+            }
+
+            // Simulate Payment Gateway Processing Delay
+            const payButton = document.querySelector('#fundModal .btn-primary');
+            const originalText = payButton.innerHTML;
+            payButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            payButton.disabled = true;
+
+            setTimeout(() => {
+                // Simulate Success (90% success rate for demo)
+                const isSuccess = Math.random() > 0.1;
+                const status = isSuccess ? 'success' : 'failed';
+                const description = `Wallet Funding via ${capitalizeFirstLetter(method)}`;
+                const timestamp = Date.now();
+
+                // Create Transaction Record in Firebase
+                const newTxRef = database.ref(`transactions/${userId}`).push();
+                newTxRef.set({
+                    type: 'funding',
+                    amount: amount,
+                    description: description,
+                    status: status,
+                    timestamp: timestamp,
+                    method: method,
+                    reference: `TXN-${Date.now()}-${Math.floor(Math.random() * 10000)}`
+                });
+
+                // If successful, update wallet balance in Firebase
+                if (isSuccess) {
+                    database.ref(`students/${userId}/wallet`).transaction((currentBalance) => {
+                        return (currentBalance || 0) + amount;
+                    });
+                    alert(`✅ Payment Successful! ₦${amount.toLocaleString()} added to your wallet.`);
+                } else {
+                    alert(`❌ Payment Failed. Please try again.`);
+                }
+
+                // Reset Button
+                payButton.innerHTML = originalText;
+                payButton.disabled = false;
+                closeFundModal();
+
+            }, 2000); // 2-second simulation delay
+        }
+
+        // --- Helper Functions ---
+        function formatTimestamp(ts) {
+            if (!ts) return 'N/A';
+            const date = new Date(ts);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        function logout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            window.location.href = 'login-dashboard.html';
+        }
+    </script>
+</body>
+</html>

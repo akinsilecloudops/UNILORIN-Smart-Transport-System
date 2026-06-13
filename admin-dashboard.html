@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - UNILORIN Smart Transport</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+    <script src="firebase-config.js"></script>
+    <style>
+        :root {
+            --unil-green: #006633;
+            --unil-dark: #004d26;
+            --unil-light: #f5f7fa;
+            --error-red: #e74c3c;
+            --warning-orange: #f39c12;
+            --success-green: #2ecc71;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--unil-light) 0%, #d9e4ec 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: var(--unil-green);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .dashboard-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logout-btn {
+            background: var(--error-red);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover { background: #c0392b; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px; /* Consistent vertical spacing */
+        }
+
+        .card-title {
+            color: var(--unil-dark);
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--unil-green);
+        }
+
+        .status-idle { color: var(--warning-orange); }
+        .status-transit { color: var(--unil-green); }
+        .status-completed { color: #7f8c8d; }
+        .status-penalty { color: var(--error-red); }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--unil-dark);
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) { background-color: #fafafa; }
+
+        .system-health {
+            margin-top: 24px; /* Explicit spacing from previous card */
+        }
+
+        .health-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px dashed #ddd;
+        }
+
+        .health-item:last-child { border-bottom: none; }
+
+        .health-status { font-weight: 600; }
+        .health-ok { color: var(--success-green); }
+        .health-warn { color: var(--warning-orange); }
+        .health-error { color: var(--error-red); }
+
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            table { font-size: 0.9rem; }
+            th, td { padding: 8px 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="adminDashboard" class="container">
+        <div class="dashboard-header">
+            <h1 class="dashboard-title"><i class="fas fa-shield-alt"></i> Admin Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Real-Time Metrics -->
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-bus"></i> Active Buses</h3>
+                <div class="card-value" id="activeBuses">0</div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">Currently in transit or assigned</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-users"></i> Students in Queues</h3>
+                <div class="card-value" id="studentsInQueues">0</div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">Across all terminals</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-route"></i> Active Trips</h3>
+                <div class="card-value" id="activeTrips">0</div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">Ongoing journeys today</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-coins"></i> Today's Revenue</h3>
+                <div class="card-value" id="todayRevenue">₦0.00</div>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 8px;">From fare deductions</p>
+            </div>
+        </div>
+
+        <!-- Bus Status Table -->
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-list"></i> Bus Status Overview</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Bus ID</th>
+                            <th>Driver ID</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Last Updated</th>
+                        </tr>
+                    </thead>
+                    <tbody id="busTableBody">
+                        <tr><td colspan="5" style="text-align:center; color:#999;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Queue Overview Table -->
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-ticket-alt"></i> Queue Overview by Terminal</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Terminal</th>
+                            <th>Queue ID</th>
+                            <th>Students Waiting</th>
+                            <th>Avg ETA</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queueTableBody">
+                        <tr><td colspan="4" style="text-align:center; color:#999;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Trips Log -->
+        <div class="card">
+            <h3 class="card-title"><i class="fas fa-history"></i> Recent Trips (Last 10)</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Trip ID</th>
+                            <th>Bus</th>
+                            <th>Driver</th>
+                            <th>Start Time</th>
+                            <th>End Time</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tripsTableBody">
+                        <tr><td colspan="6" style="text-align:center; color:#999;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Health Monitor -->
+        <div class="card system-health">
+            <h3 class="card-title"><i class="fas fa-heartbeat"></i> System Health</h3>
+            <div class="health-item">
+                <span>Firebase Connection</span>
+                <span class="health-status health-ok" id="connStatus">Connected</span>
+            </div>
+            <div class="health-item">
+                <span>Last Data Sync</span>
+                <span id="lastSyncTime">--</span>
+            </div>
+            <div class="health-item">
+                <span>Penalties Applied Today</span>
+                <span id="penaltiesToday">0</span>
+            </div>
+            <p style="font-size: 0.85rem; color: #777; margin-top: 12px;">
+                <i class="fas fa-info-circle"></i> In production, this monitors AWS CloudWatch metrics and Aurora replica lag.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // --- Auth Check ---
+        const userRole = localStorage.getItem('userRole');
+        const userId = localStorage.getItem('userId');
+
+        if (!userRole || !userId || userRole !== 'admin') {
+            alert('Access Denied. Please log in as an admin.');
+            window.location.href = 'index.html';
+        }
+
+        // --- DOM Elements ---
+        const activeBusesEl = document.getElementById('activeBuses');
+        const studentsInQueuesEl = document.getElementById('studentsInQueues');
+        const activeTripsEl = document.getElementById('activeTrips');
+        const todayRevenueEl = document.getElementById('todayRevenue');
+        const busTableBody = document.getElementById('busTableBody');
+        const queueTableBody = document.getElementById('queueTableBody');
+        const tripsTableBody = document.getElementById('tripsTableBody');
+        const connStatusEl = document.getElementById('connStatus');
+        const lastSyncTimeEl = document.getElementById('lastSyncTime');
+        const penaltiesTodayEl = document.getElementById('penaltiesToday');
+
+        // --- Firebase Listeners ---
+
+        // 1. Bus Status Listener
+        database.ref('buses').on('value', (snapshot) => {
+            const buses = snapshot.val() || {};
+            let activeCount = 0;
+            busTableBody.innerHTML = '';
+
+            Object.entries(buses).forEach(([busId, data]) => {
+                if (data.active || data.status?.toLowerCase().includes('transit')) activeCount++;
+                
+                const row = document.createElement('tr');
+                const statusClass = 
+                    data.status?.toLowerCase().includes('transit') ? 'status-transit' :
+                    data.status?.toLowerCase().includes('completed') ? 'status-completed' : 'status-idle';
+                
+                row.innerHTML = `
+                    <td>${busId}</td>
+                    <td>${data.driverId || 'N/A'}</td>
+                    <td><span class="${statusClass}">${data.status || 'Unknown'}</span></td>
+                    <td>${data.location || 'Unknown'}</td>
+                    <td>${formatTimestamp(data.lastUpdated)}</td>
+                `;
+                busTableBody.appendChild(row);
+            });
+
+            activeBusesEl.textContent = activeCount;
+            updateLastSync();
+        });
+
+        // 2. Queue Stats Listener
+        database.ref('queues').on('value', (snapshot) => {
+            const queues = snapshot.val() || {};
+            let totalStudents = 0;
+            queueTableBody.innerHTML = '';
+
+            Object.entries(queues).forEach(([queueId, data]) => {
+                const count = data.count || 0;
+                totalStudents += count;
+                
+                const terminal = queueId.replace('Q_', '').replace('_', ' ');
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${terminal}</td>
+                    <td>${queueId}</td>
+                    <td>${count}</td>
+                    <td>${data.eta || 'N/A'}</td>
+                `;
+                queueTableBody.appendChild(row);
+            });
+
+            studentsInQueuesEl.textContent = totalStudents;
+            updateLastSync();
+        });
+
+        // 3. Trips Listener
+        database.ref('trips').on('value', (snapshot) => {
+            const trips = snapshot.val() || {};
+            let activeTripCount = 0;
+            let revenue = 0;
+            tripsTableBody.innerHTML = '';
+
+            // Sort by start time descending, take last 10
+            const sortedTrips = Object.entries(trips)
+                .sort((a, b) => (b[1].startTime || 0) - (a[1].startTime || 0))
+                .slice(0, 10);
+
+            sortedTrips.forEach(([tripId, data]) => {
+                if (data.status === 'active') activeTripCount++;
+                if (data.fareDeducted) revenue += data.fareDeducted; // Simulated field
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${tripId.substring(0, 12)}...</td>
+                    <td>${data.busId || 'N/A'}</td>
+                    <td>${data.driverId || 'N/A'}</td>
+                    <td>${formatTimestamp(data.startTime)}</td>
+                    <td>${formatTimestamp(data.endTime)}</td>
+                    <td><span class="${data.status === 'active' ? 'status-transit' : 'status-completed'}">${data.status || 'Unknown'}</span></td>
+                `;
+                tripsTableBody.appendChild(row);
+            });
+
+            activeTripsEl.textContent = activeTripCount;
+            todayRevenueEl.textContent = `₦${revenue.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+            updateLastSync();
+        });
+
+        // 4. Penalties Listener (for health monitor)
+        database.ref('penalties').on('value', (snapshot) => {
+            const penalties = snapshot.val() || {};
+            let todayPenalties = 0;
+            const now = new Date();
+            const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+            Object.values(penalties).forEach(studentPenalties => {
+                Object.values(studentPenalties).forEach(p => {
+                    if (p.timestamp >= startOfDay && p.active) todayPenalties++;
+                });
+            });
+
+            penaltiesTodayEl.textContent = todayPenalties;
+        });
+
+        // --- Helper Functions ---
+        function formatTimestamp(ts) {
+            if (!ts) return 'N/A';
+            return new Date(ts).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        }
+
+        function updateLastSync() {
+            lastSyncTimeEl.textContent = new Date().toLocaleTimeString();
+        }
+
+        function logout() {
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html';
+        }
+
+        // Initialize
+        updateLastSync();
+    </script>
+</body>
+</html>

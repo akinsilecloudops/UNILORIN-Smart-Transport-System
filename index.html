@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNILORIN Smart Transport System | Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --unil-green: #006633;
+            --unil-dark: #004d26;
+            --unil-light: #f5f7fa;
+            --unil-gray: #e0e6ed;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--unil-light) 0%, #d9e4ec 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 900px;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 102, 51, 0.15);
+            display: flex;
+            flex-direction: column;
+            md:flex-row;
+        }
+
+        /* Left Panel - Branding */
+        .brand-panel {
+            background: var(--unil-green);
+            color: white;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            text-align: center;
+            flex: 1;
+        }
+
+        .brand-panel h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .brand-panel p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            line-height: 1.6;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .features {
+            margin-top: 30px;
+            text-align: left;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+        }
+
+        .feature-item i {
+            color: #4ade80;
+            font-size: 1.2rem;
+            margin-top: 3px;
+        }
+
+        /* Right Panel - Form */
+        .form-panel {
+            padding: 40px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .form-header h2 {
+            color: var(--unil-dark);
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .form-header p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        select, input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--unil-green);
+            box-shadow: 0 0 0 3px rgba(0, 102, 51, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--unil-green);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--unil-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--unil-green);
+            color: var(--unil-green);
+            margin-top: 10px;
+        }
+
+        .btn-outline:hover {
+            background: rgba(0, 102, 51, 0.05);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #eee;
+        }
+
+        .divider span {
+            padding: 0 12px;
+            color: #777;
+            font-size: 0.9rem;
+        }
+
+        .credentials {
+            background: #f8fbfd;
+            border-left: 4px solid var(--unil-green);
+            padding: 16px;
+            border-radius: 0 8px 8px 0;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        .credentials h3 {
+            margin-bottom: 8px;
+            color: var(--unil-dark);
+            font-size: 1rem;
+        }
+
+        .credentials ul {
+            padding-left: 20px;
+        }
+
+        .credentials li {
+            margin-bottom: 6px;
+        }
+
+        .footer-note {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            font-size: 0.85rem;
+            color: #777;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+            .brand-panel {
+                padding: 30px 20px;
+            }
+            .form-panel {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- Branding Panel -->
+        <div class="brand-panel">
+            <h1>UNILORIN SMART TRANSPORT SYSTEM</h1>
+            <p>A cloud-powered solution for fair, efficient, and real-time campus transport management.</p>
+
+            <div class="features">
+                <div class="feature-item">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Fingerprint or Kiosk Check-in</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Geofence-Validated Queue Joining</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-bus"></i>
+                    <span>Real-Time GPS Bus Tracking</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-credit-card"></i>
+                    <span>Digital Wallet & Auto Fare Deduction</span>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>Role-Based Access</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Form Panel -->
+        <div class="form-panel">
+            <div class="form-header">
+                <h2>Access Transport System</h2>
+                <p>Select your role to proceed</p>
+            </div>
+
+            <div class="form-group">
+                <label for="roleSelect">User Role</label>
+                <select id="roleSelect" onchange="updateCredentialHint()">
+                    <option value="student">Student</option>
+                    <option value="driver">Driver</option>
+                    <option value="admin">Admin</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="userId">User ID / Matric No. / Driver ID</label>
+                <input type="text" id="userId" placeholder="Enter ID (e.g., matric no.)">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter password">
+            </div>
+
+            <button class="btn btn-primary" onclick="handleLogin()">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+
+            <div class="divider">
+                <span>or</span>
+            </div>
+
+            <button class="btn btn-outline" onclick="window.location.href='instructions.html'">
+                <i class="fas fa-question-circle"></i> How to Use This System
+            </button>
+
+            <div class="credentials" id="credentialHint">
+                <h3>✅ Demo Credentials</h3>
+                <ul>
+                    <li><strong>Student:</strong> ID: <code>24/30GB001</code>, Pass: <code>Intern001</code></li>
+                    <li><strong>Driver:</strong> ID: <code>DRV001</code>, Pass: <code>12345678</code></li>
+                    <li><strong>Admin:</strong> ID: <code>ADM001</code>, Pass: <code>000000</code></li>
+                </ul>
+                <p><small>Demo credentials for demonstration purposes.</small></p>
+            </div>
+
+            <div class="footer-note">
+                © 2026 University of Ilorin | Capstone Project — AWS Cloud Architecture Implementation
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function handleLogin() {
+            const role = document.getElementById('roleSelect').value;
+            const userId = document.getElementById('userId').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorDiv = document.createElement('div');
+            errorDiv.id = 'loginError';
+            errorDiv.style.color = '#e74c3c';
+            errorDiv.style.marginTop = '12px';
+            errorDiv.style.fontSize = '0.9rem';
+
+            const existingError = document.getElementById('loginError');
+            if (existingError) existingError.remove();
+
+            let isValid = false;
+
+            if (role === 'student' && userId === '24/30GB001' && password === 'Intern001') {
+                isValid = true;
+            } else if (role === 'driver' && userId === 'DRV001' && password === '12345678') {
+                isValid = true;
+            } else if (role === 'admin' && userId === 'ADM001' && password === '000000') {
+                isValid = true;
+            }
+
+            if (isValid) {
+                localStorage.setItem('userRole', role);
+                localStorage.setItem('userId', userId);
+
+                if (role === 'student') {
+                    window.location.href = 'student-dashboard.html';
+                } else if (role === 'driver') {
+                    window.location.href = 'driver-dashboard.html';
+                } else if (role === 'admin') {
+                    window.location.href = 'admin-dashboard.html';
+                }
+            } else {
+                const formPanel = document.querySelector('.form-panel');
+                errorDiv.textContent = '❌ Incorrect credentials. Please verify your ID and password.';
+                formPanel.insertBefore(errorDiv, document.querySelector('.btn'));
+            }
+        }
+
+        function updateCredentialHint() {
+            const role = document.getElementById('roleSelect').value;
+            const hint = document.getElementById('credentialHint');
+            let html = `
+                <h3>✅ Demo Credentials</h3>
+                <ul>
+            `;
+
+            if (role === 'student') {
+                html += `
+                    <li><strong>Student:</strong> ID: <code>24/30GB001</code>, Pass: <code>Intern001</code></li>
+                `;
+            } else if (role === 'driver') {
+                html += `
+                    <li><strong>Driver:</strong> ID: <code>DRV001</code>, Pass: <code>12345678</code></li>
+                `;
+            } else if (role === 'admin') {
+                html += `
+                    <li><strong>Admin:</strong> ID: <code>ADM001</code>, Pass: <code>000000</code></li>
+                `;
+            }
+
+            html += `
+                    <li><small>Demo credentials for demonstration purposes.</small></li>
+                </ul>
+            `;
+            hint.innerHTML = html;
+        }
+
+        document.addEventListener('DOMContentLoaded', updateCredentialHint);
+    </script>
+</body>
+</html>
